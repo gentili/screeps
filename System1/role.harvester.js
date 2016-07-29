@@ -10,6 +10,7 @@ module.states = {
 
 function pickState(creep) {
     // If I don't have a full tank
+    console.log("pick");
     if (creep.carry.energy < creep.carryCapacity) {
         if (creep.fatigue > 0)
             pickSleepState(creep,creep.fatigue);
@@ -44,18 +45,28 @@ function pickState(creep) {
     } else {
         if (creep.fatigue > 0)
             pickSleepState(creep,creep.fatigue);
-        // We need to pick a new target so get a list of active sources
-        var sources = creep.room.find(FIND_SOURCES_ACTIVE);
-        for (var i = 0; i < sources.length; i++) {
-            var curSource = sources[i];
-            var res = creep.moveTo(curSource);
+
+        // Find a local spawn
+        var spawns = creep.room.find(FIND_MY_SPAWNS, {
+            filter: function(object) {
+                return object.energy < object.energyCapacity;
+            }
+        });
+        for (var i = 0; i < spawns.length; i++) {
+            var curSpawn = spawns[i];
+            var res = creep.moveTo(curSpawn);
             if ((res == OK)) {
-                creep.memory.sourceId = curSource.id;
+                creep.memory.deliveryId = curSpawn.id;
                 break;
             }
         }
-        creep.memory.state = module.states.DELIVERING;
-        creep.say("Delivering");
+        if (creep.memory.deliveryId != undefined) {
+            creep.memory.state = module.states.DELIVERING;
+            creep.say("Delivering "+creep.memory.deliveryId);
+            return;
+        }
+        pickSleepState(creep,5);
+        
     }
 }
 
@@ -93,7 +104,25 @@ function stateSleep(creep) {
 }
 
 function stateDeliver(creep) {
-    // Find 
+    var curDelivery = Game.getObjectById(creep.memory.deliveryId);
+    if (creep.carry.energy <= 0) {
+        pickState(creep);
+        return;
+    }
+    if (curDelivery.energy >= curDelivery.energyCapacity) {
+        pickState(creep);
+        return;
+    }
+    if (creep.transfer(curDelivery, RESOURCE_ENERGY) != ERR_NOT_IN_RANGE) {
+        return;
+    } 
+    var res = creep.moveTo(curDelivery);
+    if (res == ERR_NO_PATH) {
+        creep.memory.deliveryId = undefined;
+        pickState(creep);
+        return;
+    }
+
 }
 
 module.exports = {
@@ -112,3 +141,5 @@ module.exports = {
         } 
     }
 };
+
+// Gooberry

@@ -39,4 +39,4 @@ module.exports.loop = function () {
         roleHarvester.run(harvesters[i]);
 }
 
-// What the shit
+// Gooberry
