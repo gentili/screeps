@@ -20,13 +20,15 @@ module.exports.loop = function () {
     var spawns = [];
     for (var spawnName in Game.spawns) {
         spawns.push(Game.spawns[spawnName]);
+        // TODO: Check for any nearby creeps in need of renewal
+        
     }
     Game.private = {};
     Game.private.harvesters = harvesters;
     Game.private.sources = sources;
     
     // Check that we have enough harvester creeps
-    var harvestersToSpawn = sources.length - harvesters.length;
+    var harvestersToSpawn = sources.length*2 - harvesters.length;
     for (var i = 0; i < spawns.length && harvestersToSpawn > 0; i++) {
         var spawn = spawns[i];
         if (spawn.canCreateCreep([WORK,CARRY,CARRY,MOVE,MOVE]) == OK) {
@@ -37,6 +39,9 @@ module.exports.loop = function () {
     // Execute roles 
     for (var i = 0; i < harvesters.length; i++)
         roleHarvester.run(harvesters[i]);
+        
+    // What's the total CPU cost?
+    console.log(Game.cpu.getUsed());
 }
 
-// Gooberry
+// Sloop

@@ -10,10 +10,7 @@ module.states = {
 
 function pickState(creep) {
     // If I don't have a full tank
-    console.log("pick");
     if (creep.carry.energy < creep.carryCapacity) {
-        if (creep.fatigue > 0)
-            pickSleepState(creep,creep.fatigue);
         // Tend to favor the last source we harvested
         if (creep.memory.sourceId != undefined) {
             var curSource = Game.getObjectById(creep.memory.sourceId);
@@ -41,11 +38,9 @@ function pickState(creep) {
             return;
         }
         // OK so there's nothing to harvest right now so go to sleep
-        pickSleepState(creep,5);
+        pickSleepState(creep,5,"No sources!");
     } else {
-        if (creep.fatigue > 0)
-            pickSleepState(creep,creep.fatigue);
-
+        creep.memory.deliveryId = undefined;
         // Find a local spawn
         var spawns = creep.room.find(FIND_MY_SPAWNS, {
             filter: function(object) {
@@ -57,23 +52,28 @@ function pickState(creep) {
             var res = creep.moveTo(curSpawn);
             if ((res == OK)) {
                 creep.memory.deliveryId = curSpawn.id;
-                break;
+                creep.memory.state = module.states.DELIVERING;
+                creep.say("Deliver "+creep.memory.deliveryId);
+                return;
             }
         }
-        if (creep.memory.deliveryId != undefined) {
-            creep.memory.state = module.states.DELIVERING;
-            creep.say("Delivering "+creep.memory.deliveryId);
-            return;
+        
+        // Find an controller
+        if (creep.room.controller != undefined) {
+            creep.memory.deliveryId = creep.room.controller.id;
+                creep.memory.state = module.states.DELIVERING;
+                creep.say("Deliver "+creep.memory.deliveryId);
+                return;
         }
-        pickSleepState(creep,5);
+        pickSleepState(creep,5,"No Storage!");
         
     }
 }
 
-function pickSleepState(creep,duration) {
+function pickSleepState(creep,duration,msg) {
         creep.memory.state = module.states.SLEEPING;
         creep.memory.sleepfor = duration;
-        creep.say("Sleep "+creep.memory.sleepfor);
+        creep.say(msg);
 }
 
 function stateHarvest(creep) {
@@ -113,16 +113,18 @@ function stateDeliver(creep) {
         pickState(creep);
         return;
     }
-    if (creep.transfer(curDelivery, RESOURCE_ENERGY) != ERR_NOT_IN_RANGE) {
+    if (curDelivery.structureType == STRUCTURE_CONTROLLER) {
+        if (creep.upgradeController(curDelivery, RESOURCE_ENERGY) != ERR_NOT_IN_RANGE) {
+            return;
+        } 
+    } else if (creep.transfer(curDelivery, RESOURCE_ENERGY) != ERR_NOT_IN_RANGE) {
         return;
     } 
     var res = creep.moveTo(curDelivery);
     if (res == ERR_NO_PATH) {
-        creep.memory.deliveryId = undefined;
         pickState(creep);
         return;
     }
-
 }
 
 module.exports = {
@@ -142,4 +144,4 @@ module.exports = {
     }
 };
 
-// Gooberry
+// Sloop
